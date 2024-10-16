@@ -25,3 +25,7 @@ body {
     text-wrap: balance;
   }
 }
+
+.bg-sidebar{
+  background-image: radial-gradient(circle at 77.19% 82.4%, #a0bae8 0, #4989d4 50%, #005bbf 100%);
+}
