@@ -107,6 +107,7 @@ export const TableHistory: FC<AttendanceProps> = (props): ReactElement => {
           >
             <AiOutlineEye />
           </Link>
+
           <button
             onClick={() => handleCheckout(id)}
             disabled={!!record.checkOut}

@@ -2,91 +2,148 @@ import { NextPage } from "next";
 import { ReactElement, useState } from "react";
 import { BaseLayout } from "@/components/layout/baseLayout";
 import { TableHistory } from "@/components/molecules/table";
-import { AiOutlineSearch } from "react-icons/ai";
 import { useGetAllHistoryTable, useUpdateCheckOut } from "./api";
-import { Dropdown } from "antd/lib";
-import { Space } from "antd/lib";
-import * as XLSX from "xlsx";
+import { Select } from "antd/lib";
+import { DatePicker } from "antd/lib";
 import moment from "moment";
+import type { DatePickerProps } from "antd/lib";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 export const HistoryManagementModule: NextPage = (): ReactElement => {
   const [search, setSearch] = useState("");
   const [dropdown, setDropdown] = useState("fullName");
-
+  const [target, setTarget] = useState("");
   const { data, refetch } = useGetAllHistoryTable({ [dropdown]: search });
   const { mutate } = useUpdateCheckOut();
 
   const items = [
-    { key: "fullName", label: <p>Full Name</p> },
-    { key: "address", label: <p>Address</p> },
-    { key: "purpose", label: <p>Purpose</p> },
-    { key: "numberCard", label: <p>Number Card</p> },
+    { value: "fullName", label: <p>Full Name</p> },
+    { value: "address", label: <p>Address</p> },
+    { value: "purpose", label: <p>Purpose</p> },
+    { value: "numberCard", label: <p>Number Card</p> },
+    { value: "checkIn", label: <p>Check In</p> },
   ];
 
-  const handleMenuClick = (e: any) => {
-    setDropdown(e.key);
+  const handleChangeSelectCategory = (value: string) => {
+    setDropdown(value);
+    setTarget(value);
   };
 
-  const formattedTimeCheckIn = moment(data?.checkIn)
-    .utcOffset("+10:00")
-    .format("dddd, DD MMMM YYYY, HH:mm");
-
-  const formattedTimeChecekOut = moment(data?.checkOut)
-    .utcOffset("+10:00")
-    .format("dddd, DD MMMM YYYY, HH:mm");
-
-  const generateExcel = () => {
-    const filteredData = data.map((data: any) => ({
-      fullName: data.fullName,
-      checkIn: formattedTimeCheckIn,
-      checkOut: formattedTimeChecekOut || "Not checked out yet",
-      address: data.address,
-      purpose: data.purpose,
-      identity: data.identity || "-",
-      numberCard: data.numberCard || "-",
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(filteredData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance Data");
-    XLSX.writeFile(workbook, "attendance_report.xlsx");
+  const onChangeCheckIn: DatePickerProps["onChange"] = (date) => {
+    if (date) {
+      setSearch(date.format("YYYY-MM-DD"));
+    } else {
+      setSearch("");
+    }
   };
+
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    const filteredData = data.map((data: any) => {
+      const formattedCheckIn = moment(data.checkIn).format(
+        "DD MMMM YYYY, HH:mm"
+      );
+      const formattedCheckOut = data.checkOut
+        ? moment(data.checkOut).format("DD MMMM YYYY, HH:mm")
+        : "";
+
+      return {
+        fullName: data.fullName,
+        checkIn: formattedCheckIn,
+        checkOut: formattedCheckOut,
+        address: data.address,
+        purpose: data.purpose,
+        identity: data.identity || "-",
+        numberCard: data.numberCard || "-",
+        signature: data.signature,
+      };
+    });
+
+    const tableColumn = [
+      "Full Name",
+      "Check In",
+      "Check Out",
+      "Address",
+      "Purpose",
+      "Identity",
+      "Number Card",
+      "Signature",
+    ];
+    const tableRows: any[] = [];
+
+    // Populate the table rows with the data
+    filteredData.forEach((item: any) => {
+      const rowData = [
+        item.fullName,
+        item.checkIn,
+        item.checkOut ? item.checkOut : "-",
+        item.address,
+        item.purpose,
+        item.identity,
+        item.numberCard,
+        item.signature ? "" : "-",
+      ];
+      tableRows.push(rowData);
+    });
+
+    doc.text("Attendance Report", 14, 15);
+
+    // Add the autoTable (table) plugin to format the data
+    (doc as any).autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 20,
+      didDrawCell: (data: any) => {
+        const columnIndex = data.column.index;
+        const rowIndex = data.row.index;
+
+        if (
+          data.section === "body" &&
+          columnIndex === 7 &&
+          filteredData[rowIndex].signature
+        ) {
+          const imgData = filteredData[rowIndex].signature;
+          // Tambahkan gambar ke dalam cell
+          doc.addImage(imgData, "PNG", data.cell.x + 1, data.cell.y + 1, 10, 5);
+        }
+      },
+    });
+
+    doc.save("attendance_report.pdf");
+  };
+
   return (
     <div className="">
       <BaseLayout>
         <section className="  gap-4 mt-10">
           <div className=" flex md:flex-row flex-col md:justify-between mb-5 gap-3 ">
             <div className=" flex gap-3">
-              <section className="border-[#498AD4] border-[1px] bg-[#ffff] rounded-sm shadow-sm flex px-4 py-2 text-sm w-fit items-center gap-2 overflow-hidden md:min-w-96 text-[#4F0F11]">
-                <AiOutlineSearch className="text-black text-lg" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-[#ffff] text-black outline-none"
-                  placeholder="Search History"
-                />
-              </section>
+              <Select
+                defaultValue="Category"
+                style={{ width: 150 }}
+                onChange={handleChangeSelectCategory}
+                options={items}
+              />
 
-              <Space wrap>
-                <Dropdown
-                  menu={{
-                    items,
-                    onClick: handleMenuClick,
-                  }}
-                  placement="bottom"
-                  arrow
-                >
-                  <button className="border-[#498AD4] border-[1px] rounded-sm px-5 py-2 w-fit">
-                    Search Category
-                  </button>
-                </Dropdown>
-              </Space>
+              {target !== "checkIn" ? (
+                <section className="border-[#498AD4] border-[1px] bg-[#ffff] rounded-sm shadow-sm flex px-4 py-2 text-sm w-fit items-center gap-2 overflow-hidden md:min-w-96 text-[#4F0F11]">
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full bg-[#ffff] text-black outline-none"
+                    placeholder="Search History"
+                  />
+                </section>
+              ) : (
+                <DatePicker onChange={onChangeCheckIn} />
+              )}
             </div>
 
             <button
               className=" border-[#498AD4] border-[1px] rounded-lg px-5 w-fit "
-              onClick={generateExcel}
+              onClick={generatePDF}
             >
               Download
             </button>

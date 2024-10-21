@@ -10,13 +10,13 @@ export const HistoryManagementViewModule: NextPage = (): ReactElement => {
   const { data } = useGetByIdHistoryTable(query?._id);
   console.log("cek", data);
 
-  const formattedTimeCheckIn = moment(data?.checkIn)
-    .utcOffset("+10:00")
-    .format("dddd, DD MMMM YYYY, HH:mm");
+  const formattedTimeCheckIn = moment(data?.checkIn).format(
+    "dddd, DD MMMM YYYY, HH:mm"
+  );
 
-  const formattedTimeChecekOut = moment(data?.checkOut)
-    .utcOffset("+10:00")
-    .format("dddd, DD MMMM YYYY, HH:mm");
+  const formattedTimeChecekOut = moment(data?.checkOut).format(
+    "dddd, DD MMMM YYYY, HH:mm"
+  );
 
   return (
     <div className="">
@@ -32,6 +32,7 @@ export const HistoryManagementViewModule: NextPage = (): ReactElement => {
               <section className=" mb-4">
                 <h3 className=" text-[16px] font-semibold">Check In</h3>
                 <p>{formattedTimeCheckIn}</p>
+                {/* <p>{data?.checkIn}</p> */}
               </section>
               <section className=" mb-4">
                 <h3 className=" text-[16px] font-semibold">Number Card</h3>
@@ -40,6 +41,14 @@ export const HistoryManagementViewModule: NextPage = (): ReactElement => {
               <section className=" mb-4">
                 <h3 className=" text-[16px] font-semibold">Purpose</h3>
                 <p>{data?.purpose}</p>
+              </section>
+              <section className=" mb-4">
+                <h3 className=" text-[16px] font-semibold">No Phone</h3>
+                <p>{data?.noPhone}</p>
+              </section>
+              <section className=" mb-4">
+                <h3 className=" text-[16px] font-semibold">Last Education</h3>
+                <p>{data?.education}</p>
               </section>
               <section className=" mb-4">
                 <h3 className=" text-[16px] font-semibold">Identity</h3>
